@@ -1,9 +1,19 @@
 local json = require 'cjson'
-local http = require 'resty.http'
 
-local _M = {}
+local http, resty, ltn12
 
-_M.VERSION = '3.0.0.0'
+if ngx and ngx.get_phase() ~= 'init' then
+	http = require 'resty.http'
+	resty = true
+else
+	http = require 'ssl.https'
+	ltn12 = require 'ltn12'
+end
+
+local _M =
+{
+	VERSION = '3.0.0.1'
+}
 
 function _M.init(bot_api_key, reply)
 	_M.BASE_URL = 'https://api.telegram.org/bot'..bot_api_key..'/'
@@ -17,7 +27,7 @@ local function request(method, body)
 		if body then res = body end
 		res.method = method
 		return res
-	else -- Return the result of an HTTP request
+	elseif resty then -- Return the result of a resty.http request
 		local arguments = {}
 		if body then
 			body = json.encode(body)
@@ -35,13 +45,43 @@ local function request(method, body)
 			ngx.log(ngx.DEBUG, 'Incoming reply: '..res.body)
 			local tab = json.decode(res.body)
 			if res.status == 200 and tab.ok then
-				return tab
+				return tab, res.status
 			else
 				ngx.log(ngx.INFO, 'Failed: '..tab.description)
-				return false, tab
+				return false, res.status, tab
 			end
 		else
 			ngx.log(ngx.ERR, err) -- HTTP request failed
+		end
+	else -- Return the result of a luasocket/luasec request
+		local response_body = {}
+		local arguments =
+		{
+			url = _M.BASE_URL..method,
+			method = 'POST',
+	    sink = ltn12.sink.table(response_body)
+		}
+		if body then
+			body = json.encode(body)
+			arguments.headers =
+			{
+				['Content-Type'] = 'application/json',
+				['Content-Length'] = body:len()
+			}
+			arguments.source = ltn12.source.string(body)
+		end
+		local success, res = http.request(arguments)
+
+		if success then
+			local tab = json.decode(table.concat(response_body))
+			if res == 200 and tab.ok then
+				return tab, res
+			else
+				print('Failed: '..tab.description)
+				return false, res, tab
+			end
+		else
+			print('Connection error [' .. res .. ']')
 		end
 	end
 end
