@@ -11,7 +11,7 @@ else
 end
 
 local _M = {
-	VERSION = '3.0.0.1'
+	VERSION = '3.1.0.0'
 }
 
 function _M.init(bot_api_key, reply)
@@ -365,11 +365,14 @@ function _M.getFile(file_id)
 	return request('getFile', body)
 end
 
-function _M.kickChatMember(chat_id, user_id)
+function _M.kickChatMember(chat_id, user_id, until_date)
 	local body = {
 		chat_id = chat_id,
 		user_id = user_id
 	}
+	if until_date then
+		body.until_date = until_date
+	end
 	return request('kickChatMember', body)
 end
 
@@ -379,6 +382,119 @@ function _M.unbanChatMember(chat_id, user_id)
 		user_id = user_id
 	}
 	return request('unbanChatMember', body)
+end
+
+function _M.restrictChatMember(chat_id, user_id, until_date, can_send_messages, can_send_media_messages,
+	can_send_other_messages, can_add_web_page_previews)
+	local body = {
+		chat_id = chat_id,
+		user_id = user_id
+	}
+	if until_date then
+		body.until_date = until_date
+	end
+	if can_send_messages then
+	body.can_send_messages = can_send_messages
+	end
+	if can_send_media_messages then
+	body.can_send_media_messages = can_send_media_messages
+	end
+	if can_send_other_messages then
+	body.can_send_other_messages = can_send_other_messages
+	end
+	if can_add_web_page_previews then
+		body.can_add_web_page_previews = can_add_web_page_previews
+	end
+	return request('restrictChatMember', body)
+end
+
+function _M.promoteChatMember(chat_id, user_id, can_change_info, can_post_messages, can_edit_messages,
+	can_delete_messages, can_invite_users, can_restrict_members, can_pin_messages, can_promote_members)
+	local body = {
+		chat_id = chat_id,
+		user_id = user_id
+	}
+	if can_change_info then
+		body.can_change_info = can_change_info
+	end
+	if can_post_messages then
+		body.can_post_messages = can_post_messages
+	end
+	if can_edit_messages then
+		body.can_edit_messages = can_edit_messages
+	end
+	if can_delete_messages then
+		body.can_delete_messages = can_delete_messages
+	end
+	if can_invite_users then
+		body.can_invite_users = can_invite_users
+	end
+	if can_restrict_members then
+		body.can_restrict_members = can_restrict_members
+	end
+	if can_pin_messages then
+		body.can_pin_messages = can_pin_messages
+	end
+	if can_promote_members then
+		body.can_promote_members = can_promote_members
+	end
+	return request('restrictChatMember', body)
+end
+
+function _M.exportChatInviteLink(chat_id)
+	local body = {
+		chat_id = chat_id
+	}
+	return request('exportChatInviteLink', body)
+end
+
+function _M.setChatPhoto(chat_id, photo)
+	local body = {
+		chat_id = chat_id,
+		photo = photo
+	}
+	return request('setChatPhoto', body)
+end
+
+function _M.deleteChatPhoto(chat_id)
+	local body = {
+		chat_id = chat_id
+	}
+	return request('deleteChatPhoto', body)
+end
+
+function _M.setChatTitle(chat_id, title)
+	local body = {
+		chat_id = chat_id,
+		title = title
+	}
+	return request('setChatTitle', body)
+end
+
+function _M.setChatDescription(chat_id, description)
+	local body = {
+		chat_id = chat_id,
+		description = description
+	}
+	return request('setChatDescription', body)
+end
+
+function _M.pinChatMessage(chat_id, message_id, disable_notification)
+	local body = {
+		chat_id = chat_id,
+		message_id = message_id
+	}
+	if disable_notification then
+		body.disable_notification = disable_notification
+	end
+	return request('pinChatMessage', body)
+end
+
+function _M.unpinChatMessage(chat_id)
+	local body = {
+		chat_id = chat_id
+	}
+	return request('unpinChatMessage', body)
 end
 
 function _M.leaveChat(chat_id)
