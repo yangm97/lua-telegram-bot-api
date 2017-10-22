@@ -11,7 +11,7 @@ else
 end
 
 local _M = {
-	VERSION = '3.1.0.0'
+	VERSION = '3.2.0.0'
 }
 
 function _M.init(bot_api_key, reply)
@@ -244,6 +244,66 @@ function _M.sendSticker(chat_id, sticker, caption, disable_notification, reply_t
 	body = pre_media(body, caption)
 	body = pre_msg(body, disable_notification, reply_to_message_id, reply_markup)
 	return request('sendSticker', body)
+end
+
+function _M.getSticker(name)
+	local body = {
+		name = name
+	}
+	return request('getSticker', body)
+end
+
+function _M.uploadStickerFile(user_id, png_sticker)
+	local body = {
+		user_id = user_id,
+		png_sticker = png_sticker
+	}
+	return request('uploadStickerFile', body)
+end
+
+function _M.createNewStickerSet(user_id, name, title, png_sticker, emojis, contains_masks, mask_position)
+	local body = {
+		user_id = user_id,
+		name = name,
+		title = title,
+		png_sticker = png_sticker,
+		emojis = emojis
+	}
+	if contains_masks then
+		body.contains_masks = contains_masks
+	end
+	if mask_position then
+		body.mask_position = mask_position
+	end
+	return request('createNewStickerSet', body)
+end
+
+function _M.addStickerToSet(user_id, name, png_sticker, emojis, mask_position)
+	local body = {
+		user_id = user_id,
+		name = name,
+		png_sticker = png_sticker,
+		emojis = emojis
+	}
+	if mask_position then
+		body.mask_position = mask_position
+	end
+	return request('addStickerToSet', body)
+end
+
+function _M.setStickerPositionInSet(sticker, position)
+	local body = {
+		sticker = sticker,
+		position = position
+	}
+	return request('setStickerPositionInSet', body)
+end
+
+function _M.deleteStickerFromSet(sticker)
+	local body = {
+		sticker = sticker
+	}
+	return request('deleteStickerFromSet', body)
 end
 
 function _M.sendVideo(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id,
