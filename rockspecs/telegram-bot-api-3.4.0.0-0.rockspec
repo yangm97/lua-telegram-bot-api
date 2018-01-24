@@ -1,9 +1,9 @@
 package = "telegram-bot-api"
-version = "3.4.0-0"
+version = "3.4.0.0-0"
 
 source = {
 	url = "git://github.com/yangm97/lua-telegram-bot-api",
-	tag = "3.4.0"
+	tag = "3.4.0.0"
 }
 
 description = {
