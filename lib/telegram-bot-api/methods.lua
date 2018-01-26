@@ -1,5 +1,5 @@
 local _M = {
-  VERSION = "3.5.0.0"
+  VERSION = "3.5.0.1"
 }
 
 local json = require "cjson"
