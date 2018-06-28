@@ -19,12 +19,12 @@ if not ok then
 end
 ```
 
-Using body table:
+Using body table (snake_case is supported too!):
 
 ```
 local api = require "telegram-bot-api.methods".init("123456789:ABCDefGhw3gUmZOq36-D_46_AMwGBsfefbcQ")
 
-local ok, err = api.sendMessage({
+local ok, err = api.send_message({
   chat_id = 12345678,
   text = "Hello World",
   parse_mode = "html"

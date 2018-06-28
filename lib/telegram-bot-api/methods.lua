@@ -834,6 +834,8 @@ function _M.getGameHighScores(...)
   return request("getGameHighScores", body)
 end
 
+-- Passthrough unknown methods
+
 function _M.Custom(_, method)
   print("Using custom method "..method)
   return function(body)
@@ -842,5 +844,67 @@ function _M.Custom(_, method)
 end
 
 setmetatable(_M, { __index = _M.Custom })
+
+-- Snake case shortcuts for known methods
+
+_M.get_updates = _M.getUpdates
+_M.set_webhook = _M.setWebhook
+_M.delete_webhook = _M.deleteWebhook
+_M.get_webhook_info = _M.getWebhookInfo
+_M.get_me = _M.getMe
+_M.send_message = _M.sendMessage
+_M.forward_message = _M.forwardMessage
+_M.send_photo = _M.sendPhoto
+_M.send_audio = _M.sendAudio
+_M.send_document = _M.sendDocument
+_M.send_video = _M.sendVideo
+_M.send_voice = _M.sendVoice
+_M.send_video_note = _M.sendVideoNote
+_M.send_media_group = _M.sendMediaGroup
+_M.send_location = _M.sendLocation
+_M.edit_message_live_location = _M.editMessageLiveLocation
+_M.stop_message_live_location = _M.stopMessageLiveLocation
+_M.send_venue = _M.sendVenue
+_M.send_contact = _M.sendContact
+_M.send_chat_action = _M.sendChatAction
+_M.get_user_profile_photos = _M.getUserProfilePhotos
+_M.get_file = _M.getFile
+_M.kick_chat_member = _M.kickChatMember
+_M.unban_chat_member = _M.unbanChatMember
+_M.restrict_chat_member = _M.restrictChatMember
+_M.promote_chat_member = _M.promoteChatMember
+_M.export_chat_invite_link = _M.exportChatInviteLink
+_M.set_chat_photo = _M.setChatPhoto
+_M.delete_chat_photo = _M.deleteChatPhoto
+_M.set_chat_title = _M.setChatTitle
+_M.set_chat_description = _M.setChatDescription
+_M.pin_chat_message = _M.pinChatMessage
+_M.unpin_chat_message = _M.unpinChatMessage
+_M.leave_chat = _M.leaveChat
+_M.get_chat = _M.getChat
+_M.get_chat_administrators = _M.getChatAdministrators
+_M.get_chat_members_count = _M.getChatMembersCount
+_M.get_chat_member = _M.getChatMember
+_M.set_chat_sticker_set = _M.setChatStickerSet
+_M.delete_chat_sticker_set = _M.deleteChatStickerSet
+_M.answer_callback_query = _M.answerCallbackQuery
+_M.edit_message_text = _M.editMessageText
+_M.edit_message_caption = _M.editMessageCaption
+_M.edit_message_replymarkup = _M.editMessageReplyMarkup
+_M.delete_message = _M.deleteMessage
+_M.send_sticker = _M.sendSticker
+_M.get_sticker_set = _M.getStickerSet
+_M.upload_sticker_file = _M.uploadStickerFile
+_M.create_new_sticker_set = _M.createNewStickerSet
+_M.add_sticker_to_set = _M.addStickerToSet
+_M.set_sticker_position_in_set = _M.setStickerPositionInSet
+_M.delete_sticker_from_set = _M.deleteStickerFromSet
+_M.answer_inline_query = _M.answerInlineQuery
+_M.send_invoice = _M.sendInvoice
+_M.answer_shipping_query = _M.answerShippingQuery
+_M.answer_pre_checkout_query = _M.answerPreCheckoutQuery
+_M.send_game = _M.sendGame
+_M.set_game_score = _M.setGameScore
+_M.get_game_high_scores = _M.getGameHighScores
 
 return _M
