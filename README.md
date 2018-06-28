@@ -42,10 +42,10 @@ You can also set a custom set a custom server as the second init argument, and c
 ```
 local api = require "telegram-bot-api.methods".init("123456789:ABCDefGhw3gUmZOq36-D_46_AMwGBsfefbcQ", {server="api.pwrtelegram.xyz"})
 
-local ok, err = api.Custom("phonelogin", {phone="+3984748839"})
+local ok, err = api.phoneLogin({phone="+3984748839"})
 
 if not ok then
-  print("Error while using phonelogin: "..err.description)
+  print("Error while using phoneLogin: "..err.description)
 end
 ```
 

@@ -834,8 +834,13 @@ function _M.getGameHighScores(...)
   return request("getGameHighScores", body)
 end
 
-function _M.Custom(method, body)
-  return request(method, body)
+function _M.Custom(_, method)
+  print("Using custom method "..method)
+  return function(body)
+    return request(method, body)
+  end
 end
+
+setmetatable(_M, { __index = _M.Custom })
 
 return _M
