@@ -110,22 +110,24 @@ end
 
 -- Getting updates
 
-function _M.getUpdates(offset, limit, timeout, allowed_updates)
-  local body = is_table(offset) or {
-      offset = offset,
-      limit = limit,
-      timeout = timeout,
-      allowed_updates = allowed_updates
+function _M.getUpdates(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+      offset = args[1],
+      limit = args[2],
+      timeout = args[3],
+      allowed_updates = args[4]
     }
   return request("getUpdates", body)
 end
 
-function _M.setWebhook(url, certificate, max_connections, allowed_updates)
-  local body = is_table(url) or {
-    url = url,
-    certificate = certificate,
-    max_connections = max_connections,
-    allowed_updates = allowed_updates
+function _M.setWebhook(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    url = args[1],
+    certificate = args[2],
+    max_connections = args[3],
+    allowed_updates = args[4]
   }
   assert_var(body, "url")
   request("setWebhook", body)
@@ -140,6 +142,7 @@ function _M.getWebhookInfo()
 end
 
 -- Available methods
+
 function _M.getMe()
   local getMe = c:get("getMe")
   if getMe then
@@ -151,211 +154,227 @@ function _M.getMe()
   end
 end
 
-function _M.sendMessage(chat_id, text, parse_mode, disable_web_page_preview, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    text = text,
-    parse_mode = parse_mode,
-    disable_web_page_preview = disable_web_page_preview,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendMessage(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    text = args[2],
+    parse_mode = args[3],
+    disable_web_page_preview = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "text")
   return request("sendMessage", body)
 end
 
-function _M.forwardMessage(chat_id, from_chat_id, message_id, disable_notification)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    from_chat_id = from_chat_id,
-    message_id = message_id,
-    disable_notification = disable_notification
+function _M.forwardMessage(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    from_chat_id = args[2],
+    message_id = args[3],
+    disable_notification = args[4]
   }
   assert_var(body, "chat_id", "from_chat_id", "message_id")
   return request("forwardMessage", body)
 end
 
-function _M.sendPhoto(chat_id, photo, caption, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    photo = photo,
-    caption = caption,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendPhoto(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    photo = args[2],
+    caption = args[3],
+    disable_notification = args[4],
+    reply_to_message_id = args[5],
+    reply_markup = args[6]
   }
   assert_var(body, "chat_id", "photo")
   return request("sendPhoto", body)
 end
 
-function _M.sendAudio(chat_id, audio, caption, duration, performer, title, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    audio = audio,
-    caption = caption,
-    duration = duration,
-    performer = performer,
-    title = title,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendAudio(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    audio = args[2],
+    caption = args[3],
+    duration = args[4],
+    performer = args[5],
+    title = args[6],
+    disable_notification = args[7],
+    reply_to_message_id = args[8],
+    reply_markup = args[9]
   }
   assert_var(body, "chat_id", "audio")
   return request("sendAudio", body)
 end
 
-function _M.sendDocument(chat_id, document, caption, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    document = document,
-    caption = caption,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendDocument(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    document = args[2],
+    caption = args[3],
+    disable_notification = args[4],
+    reply_to_message_id = args[5],
+    reply_markup = args[6]
   }
   assert_var(body, "chat_id", "document")
   return request("sendDocument", body)
 end
 
-function _M.sendVideo(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    video = video,
-    duration = duration,
-    width = width,
-    height = height,
-    caption = caption,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendVideo(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    video = args[2],
+    duration = args[3],
+    width = args[4],
+    height = args[5],
+    caption = args[6],
+    disable_notification = args[7],
+    reply_to_message_id = args[8],
+    reply_markup = args[9]
   }
   assert_var(body, "chat_id", "video")
   return request("sendVideo", body)
 end
 
-function _M.sendVoice(chat_id, voice, caption, duration, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    voice = voice,
-    duration = duration,
-    caption = caption,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendVoice(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    voice = args[2],
+    duration = args[3],
+    caption = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "voice")
   return request("sendVoice", body)
 end
 
-function _M.sendVideoNote(chat_id, video_note, duration, lenght, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    video_note = video_note,
-    duration = duration,
-    lenght = lenght,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendVideoNote(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    video_note = args[2],
+    duration = args[3],
+    lenght = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "video_note")
   return request("sendVideoNote", body)
 end
 
-function _M.sendMediaGroup(chat_id, media, disable_notification, reply_to_message_id)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    media = media,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
+function _M.sendMediaGroup(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    media = args[2],
+    disable_notification = args[3],
+    reply_to_message_id = args[4]
   }
   assert_var(body, "chat_id", "media")
   return request("sendMediaGroup", body)
 end
 
-function _M.sendLocation(chat_id, latitude, longitude, live_period, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    latitude = latitude,
-    longitude = longitude,
-    live_period = live_period,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendLocation(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    latitude = args[2],
+    longitude = args[3],
+    live_period = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "latitude", "longitude")
   return request("sendLocation", body)
 end
 
-function _M.editMessageLiveLocation(chat_id, message_id, inline_message_id, latitude, longitude, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id,
-    latitude = latitude,
-    longitude = longitude,
-    reply_markup = reply_markup
+function _M.editMessageLiveLocation(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    inline_message_id = args[3],
+    latitude = args[4],
+    longitude = args[5],
+    reply_markup = args[6]
   }
   check_id(body)
   assert_var(body, "latitude", "longitude")
   return request("editMessageLiveLocation", body)
 end
 
-function _M.stopMessageLiveLocation(chat_id, message_id, inline_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id,
-    reply_markup = reply_markup
+function _M.stopMessageLiveLocation(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    inline_message_id = args[3],
+    reply_markup = args[4]
   }
   check_id(body)
   return request("editMessageLiveLocation", body)
 end
 
-function _M.sendVenue(chat_id, latitude, longitude, title, address, foursquare_id, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    latitude = latitude,
-    longitude = longitude,
-    title = title,
-    address = address,
-    foursquare_id = foursquare_id,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendVenue(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    latitude = args[2],
+    longitude = args[3],
+    title = args[4],
+    address = args[5],
+    foursquare_id = args[6],
+    disable_notification = args[7],
+    reply_to_message_id = args[8],
+    reply_markup = args[9]
   }
   assert_var(body, "chat_id", "latitude", "longitude", "title", "address")
   return request("sendVenue", body)
 end
 
-function _M.sendContact(chat_id, phone_number, first_name, last_name, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    phone_number = phone_number,
-    first_name = first_name,
-    last_name = last_name,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendContact(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    phone_number = args[2],
+    first_name = args[3],
+    last_name = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "phone_number", "first_name")
   return request("sendContact", body)
 end
 
-function _M.sendChatAction(chat_id, action)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    action = action
+function _M.sendChatAction(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    action = args[2]
   }
   assert_var(body, "chat_id", "action")
   return request("sendChatAction", body)
 end
 
-function _M.getUserProfilePhotos(user_id, offset, limit)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    offset = offset,
-    limit = limit
+function _M.getUserProfilePhotos(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    offset = args[2],
+    limit = args[3]
   }
   assert_var(body, "user_id")
   return request("getUserProfilePhotos", body)
@@ -369,51 +388,55 @@ function _M.getFile(file_id)
   return request("getFile", body)
 end
 
-function _M.kickChatMember(chat_id, user_id, until_date)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    user_id = user_id,
-    until_date = until_date
+function _M.kickChatMember(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    user_id = args[2],
+    until_date = args[3]
   }
   assert_var(body, "chat_id", "user_id")
   return request("kickChatMember", body)
 end
 
-function _M.unbanChatMember(chat_id, user_id)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    user_id = user_id
+function _M.unbanChatMember(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    user_id = args[2]
   }
   assert_var(body, "chat_id", "user_id")
   return request("unbanChatMember", body)
 end
 
-function _M.restrictChatMember(chat_id, user_id, until_date, can_send_messages, can_send_media_messages, can_send_other_messages, can_add_web_page_previews)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    user_id = user_id,
-    until_date = until_date,
-    can_send_messages = can_send_messages,
-    can_send_media_messages = can_send_media_messages,
-    can_send_other_messages = can_send_other_messages,
-    can_add_web_page_previews = can_add_web_page_previews
+function _M.restrictChatMember(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    user_id = args[2],
+    until_date = args[3],
+    can_send_messages = args[4],
+    can_send_media_messages = args[5],
+    can_send_other_messages = args[6],
+    can_add_web_page_previews = args[7]
   }
   assert_var(body, "chat_id", "user_id")
   return request("restrictChatMember", body)
 end
 
-function _M.promoteChatMember(chat_id, user_id, can_change_info, can_post_messages, can_edit_messages, can_delete_messages, can_invite_users, can_restrict_members, can_pin_messages, can_promote_members)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    user_id = user_id,
-    can_change_info = can_change_info,
-    can_post_messages = can_post_messages,
-    can_edit_messages = can_edit_messages,
-    can_delete_messages = can_delete_messages,
-    can_invite_users = can_invite_users,
-    can_restrict_members = can_restrict_members,
-    can_pin_messages = can_pin_messages,
-    can_promote_members = can_promote_members
+function _M.promoteChatMember(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    user_id = args[2],
+    can_change_info = args[3],
+    can_post_messages = args[4],
+    can_edit_messages = args[5],
+    can_delete_messages = args[6],
+    can_invite_users = args[7],
+    can_restrict_members = args[8],
+    can_pin_messages = args[9],
+    can_promote_members = args[10]
   }
   assert_var(body, "chat_id", "user_id")
   return request("promoteChatMember", body)
@@ -427,10 +450,11 @@ function _M.exportChatInviteLink(chat_id)
   return request("exportChatInviteLink", body)
 end
 
-function _M.setChatPhoto(chat_id, photo)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    photo = photo
+function _M.setChatPhoto(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    photo = args[2]
   }
   assert_var(body, "chat_id", "photo")
   return request("setChatPhoto", body)
@@ -444,29 +468,32 @@ function _M.deleteChatPhoto(chat_id)
   return request("deleteChatPhoto", body)
 end
 
-function _M.setChatTitle(chat_id, title)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    title = title
+function _M.setChatTitle(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    title = args[2]
   }
   assert_var(body, "chat_id", "title")
   return request("setChatTitle", body)
 end
 
-function _M.setChatDescription(chat_id, description)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    description = description
+function _M.setChatDescription(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    description = args[2]
   }
   assert_var(body, "chat_id", "description")
   return request("setChatDescription", body)
 end
 
-function _M.pinChatMessage(chat_id, message_id, disable_notification)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    disable_notification = disable_notification
+function _M.pinChatMessage(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    disable_notification = args[3]
   }
   assert_var(body, "chat_id", "message_id")
   return request("pinChatMessage", body)
@@ -512,19 +539,21 @@ function _M.getChatMembersCount(chat_id)
   return request("getChatMembersCount", body)
 end
 
-function _M.getChatMember(chat_id, user_id)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    user_id = user_id
+function _M.getChatMember(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    user_id = args[2]
   }
   assert_var(body, "chat_id", "user_id")
   return request("getChatMember", body)
 end
 
-function _M.setChatStickerSet(chat_id, sticker_set_name)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    sticker_set_name = sticker_set_name
+function _M.setChatStickerSet(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    sticker_set_name = args[2]
   }
   assert_var(body, "chat_id", "sticker_set_name")
   return request("setChatStickerSet", body)
@@ -538,12 +567,13 @@ function _M.deleteChatStickerSet(chat_id)
   return request("setChatStickerSet", body)
 end
 
-function _M.answerCallbackQuery(callback_query_id, text, show_alert, cache_time)
-  local body = is_table(callback_query_id) or {
-    callback_query_id = callback_query_id,
-    text = text,
-    show_alert = show_alert,
-    cache_time = cache_time
+function _M.answerCallbackQuery(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    callback_query_id = args[1],
+    text = args[2],
+    show_alert = args[3],
+    cache_time = args[4]
   }
   assert_var(body, "callback_query_id")
   return request("answerCallbackQuery", body)
@@ -551,48 +581,52 @@ end
 
 -- Updating messages
 
-function _M.editMessageText(chat_id, message_id, inline_message_id, text, parse_mode, disable_web_page_preview, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id,
-    text = text,
-    parse_mode = parse_mode,
-    disable_web_page_preview = disable_web_page_preview,
-    reply_markup = reply_markup
+function _M.editMessageText(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    inline_message_id = args[3],
+    text = args[4],
+    parse_mode = args[5],
+    disable_web_page_preview = args[6],
+    reply_markup = args[7]
   }
   check_id(body)
   assert_var(body, "text")
   return request("editMessageText", body)
 end
 
-function _M.editMessageCaption(chat_id, message_id, inline_message_id, caption, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id,
-    caption = caption,
-    reply_markup = reply_markup
+function _M.editMessageCaption(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    inline_message_id = args[3],
+    caption = args[4],
+    reply_markup = args[5]
   }
   check_id(body)
   return request("editMessageCaption", body)
 end
 
-function _M.editMessageReplyMarkup(chat_id, message_id, inline_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id,
-    reply_markup = reply_markup
+function _M.editMessageReplyMarkup(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2],
+    inline_message_id = args[3],
+    reply_markup = args[4]
   }
   check_id(body)
   return request("editMessageReplyMarkup", body)
 end
 
-function _M.deleteMessage(chat_id, message_id)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    message_id = message_id
+function _M.deleteMessage(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    message_id = args[2]
   }
   assert_var(body, "chat_id", "message_id")
   return request("deleteMessage", body)
@@ -600,14 +634,15 @@ end
 
 -- Stickers
 
-function _M.sendSticker(chat_id, sticker, caption, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    sticker = sticker,
-    caption = caption,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendSticker(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    sticker = args[2],
+    caption = args[3],
+    disable_notification = args[4],
+    reply_to_message_id = args[5],
+    reply_markup = args[6]
   }
   assert_var(body, "chat_id", "sticker")
   return request("sendSticker", body)
@@ -621,45 +656,49 @@ function _M.getStickerSet(name)
   return request("getSticker", body)
 end
 
-function _M.uploadStickerFile(user_id, png_sticker)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    png_sticker = png_sticker
+function _M.uploadStickerFile(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    png_sticker = args[2]
   }
   assert_var(body, "user_id", "png_sticker")
   return request("uploadStickerFile", body)
 end
 
-function _M.createNewStickerSet(user_id, name, title, png_sticker, emojis, contains_masks, mask_position)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    name = name,
-    title = title,
-    png_sticker = png_sticker,
-    emojis = emojis,
-    contains_masks = contains_masks,
-    mask_position = mask_position
+function _M.createNewStickerSet(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    name = args[2],
+    title = args[3],
+    png_sticker = args[4],
+    emojis = args[5],
+    contains_masks = args[6],
+    mask_position = args[7]
   }
   assert_var(body, "user_id", "name", "title", "png_sticker", "emojis")
   return request("createNewStickerSet", body)
 end
 
-function _M.addStickerToSet(user_id, name, png_sticker, emojis, mask_position)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    name = name,
-    png_sticker = png_sticker,
-    emojis = emojis,
-    mask_position = mask_position
+function _M.addStickerToSet(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    name = args[2],
+    png_sticker = args[3],
+    emojis = args[4],
+    mask_position = args[5]
   }
   assert_var(body, "user_id", "name", "png_sticker", "emojis")
   return request("addStickerToSet", body)
 end
 
-function _M.setStickerPositionInSet(sticker, position)
-  local body = is_table(sticker) or {
-    sticker = sticker,
-    position = position
+function _M.setStickerPositionInSet(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    sticker = args[1],
+    position = args[2]
   }
   assert_var(body, "sticker", "position")
   return request("setStickerPositionInSet", body)
@@ -675,14 +714,15 @@ end
 
 -- Inline mode
 
-function _M.answerInlineQuery(inline_query_id, results, cache_time, is_personal, switch_pm_text, switch_pm_parameter)
-  local body = is_table(inline_query_id) or {
-    inline_query_id = inline_query_id,
-    results = results,
-    cache_time = cache_time,
-    is_personal = is_personal,
-    switch_pm_text = switch_pm_text,
-    switch_pm_parameter = switch_pm_parameter
+function _M.answerInlineQuery(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    inline_query_id = args[1],
+    results = args[2],
+    cache_time = args[3],
+    is_personal = args[4],
+    switch_pm_text = args[5],
+    switch_pm_parameter = args[6]
   }
   assert_var(body, "inline_query_id", "results")
   return request("answerInlineQuery", body)
@@ -690,40 +730,42 @@ end
 
 -- Payments
 
-function _M.sendInvoice(chat_id, title, description, payload, provider_token, start_parameter, currency, prices, photo_url, photo_width, photo_height, need_name, need_phone_number, need_email, need_shipping_address, send_phone_number_to_provider, send_email_to_provider, is_flexible, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    title = title,
-    description = description,
-    payload = payload,
-    provider_token = provider_token,
-    start_parameter = start_parameter,
-    currency = currency,
-    prices = prices,
-    photo_url = photo_url,
-    photo_width = photo_width,
-    photo_height = photo_height,
-    need_name = need_name,
-    need_phone_number = need_phone_number,
-    need_email = need_email,
-    need_shipping_address = need_shipping_address,
-    send_phone_number_to_provider = send_phone_number_to_provider,
-    send_email_to_provider = send_email_to_provider,
-    is_flexible = is_flexible,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendInvoice(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    title = args[2],
+    description = args[3],
+    payload = args[4],
+    provider_token = args[5],
+    start_parameter = args[6],
+    currency = args[7],
+    prices = args[8],
+    photo_url = args[9],
+    photo_width = args[10],
+    photo_height = args[11],
+    need_name = args[12],
+    need_phone_number = args[13],
+    need_email = args[14],
+    need_shipping_address = args[15],
+    send_phone_number_to_provider = args[16],
+    send_email_to_provider = args[17],
+    is_flexible = args[18],
+    disable_notification = args[19],
+    reply_to_message_id = args[20],
+    reply_markup = args[21]
   }
   assert_var(body, "chat_id", "title", "description", "payload", "provider_token", "start_parameter", "currency", "prices")
   return request("sendInvoice", body)
 end
 
-function _M.answerShippingQuery(shipping_query_id, ok, shipping_options, error_message)
-  local body = is_table(shipping_query_id) or {
-    shipping_query_id = shipping_query_id,
-    ok = ok,
-    shipping_options = shipping_options,
-    error_message = error_message
+function _M.answerShippingQuery(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    shipping_query_id = args[1],
+    ok = args[2],
+    shipping_options = args[3],
+    error_message = args[4]
   }
   assert_var(body, "shipping_query_id")
   if body.ok then
@@ -734,11 +776,12 @@ function _M.answerShippingQuery(shipping_query_id, ok, shipping_options, error_m
   return request("answerShippingQuery", body)
 end
 
-function _M.answerPreCheckoutQuery(pre_checkout_query_id, ok, error_message)
-  local body = is_table(pre_checkout_query_id) or {
-    pre_checkout_query_id = pre_checkout_query_id,
-    ok = ok,
-    error_message = error_message
+function _M.answerPreCheckoutQuery(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    pre_checkout_query_id = args[1],
+    ok = args[2],
+    error_message = args[3]
   }
   assert_var(body, "pre_checkout_query_id")
   if not body.ok then
@@ -749,39 +792,42 @@ end
 
 -- Games
 
-function _M.sendGame(chat_id, game_short_name, disable_notification, reply_to_message_id, reply_markup)
-  local body = is_table(chat_id) or {
-    chat_id = chat_id,
-    game_short_name = game_short_name,
-    disable_notification = disable_notification,
-    reply_to_message_id = reply_to_message_id,
-    reply_markup = reply_markup
+function _M.sendGame(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    chat_id = args[1],
+    game_short_name = args[2],
+    disable_notification = args[3],
+    reply_to_message_id = args[4],
+    reply_markup = args[5]
   }
   assert_var(body, "chat_id", "game_short_name")
   request("sendGame", body)
 end
 
-function _M.setGameScore(user_id, score, force, disable_edit_message, chat_id, message_id, inline_message_id)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    score = score,
-    force = force,
-    disable_edit_message = disable_edit_message,
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id
+function _M.setGameScore(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    score = args[2],
+    force = args[3],
+    disable_edit_message = args[4],
+    chat_id = args[5],
+    message_id = args[6],
+    inline_message_id = args[7]
   }
   check_id(body)
   assert_var(body, "user_id", "score")
   return request("setGameScore", body)
 end
 
-function _M.getGameHighScores(user_id, chat_id, message_id, inline_message_id)
-  local body = is_table(user_id) or {
-    user_id = user_id,
-    chat_id = chat_id,
-    message_id = message_id,
-    inline_message_id = inline_message_id
+function _M.getGameHighScores(...)
+  local args = {...}
+  local body = is_table(args[1]) or {
+    user_id = args[1],
+    chat_id = args[2],
+    message_id = args[3],
+    inline_message_id = args[4]
   }
   check_id(body)
   assert_var(body, "user_id")
