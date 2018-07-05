@@ -113,11 +113,11 @@ end
 function _M.getUpdates(...)
   local args = {...}
   local body = is_table(args[1]) or {
-      offset = args[1],
-      limit = args[2],
-      timeout = args[3],
-      allowed_updates = args[4]
-    }
+    offset = args[1],
+    limit = args[2],
+    timeout = args[3],
+    allowed_updates = args[4]
+  }
   return request("getUpdates", body)
 end
 
