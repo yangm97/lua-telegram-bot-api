@@ -3,96 +3,116 @@ local _M = {
 }
 
 local json = require "cjson"
-local lru, http, ltn12
-if ngx then
-  lru = require "resty.lrucache"
-  http = require "resty.http"
-else
-  lru = require "lru"
-  http = require "ssl.https"
-  ltn12 = require "ltn12"
-end
+local mp = require "multipart-post"
+local ltn12 = require "ltn12"
+local resty_http, ssl_https
 
-local c, err = lru.new(200)
-if not c then
-  return error("failed to create the cache: " .. (err or "unknown"))
-end
+local function decode_reply(body, status, method)
+  -- ngx.log(ngx.DEBUG, "Incoming reply:", ok.body)
+  local tab = json.decode(body)
 
-function _M.init(bot_api_key, config)
-  local server = "api.telegram.org"
-  if config and config.server then
-    server = config.server
+  if status ~= 200 or not tab.ok then
+    -- ngx.log(ngx.WARN, method.."() failed: "..(tab.description or "unknown"))
+    print("[WARN]", method.."() failed: "..(tab.description or "unknown"))
+    return nil, tab
   end
-  _M.BASE_URL = "https://"..server.."/bot"..bot_api_key.."/"
-  return _M
+  return tab.result
 end
 
-local function request(method, body)
-  local res
-  if ngx then -- Return the result of a resty.http request
-    local arguments = {}
-    if body then
-      body = json.encode(body)
-      arguments = {
-        method = "POST",
-        headers = {
-          ["Content-Type"] = "application/json"
-        },
-        body = body
-      }
-      ngx.log(ngx.DEBUG, "Outgoing request: "..body)
-    end
-    local httpc = http.new()
-    res, err = httpc:request_uri((_M.BASE_URL..method), arguments)
-    if res then
-      ngx.log(ngx.DEBUG, "Incoming reply: "..res.body)
-      local tab = json.decode(res.body)
-      if res.status == 200 and tab.ok then
-        return tab.result
-      else
-        ngx.log(ngx.INFO, method.."() failed: "..tab.description)
-        return false, tab
-      end
-    else
-      ngx.log(ngx.ERR, err) -- HTTP request failed
-    end
-  else -- Return the result of a luasocket/luasec request
-    local success
-    local response_body = {}
-    local arguments = {
-      url = _M.BASE_URL..method,
-      method = "POST",
-      sink = ltn12.sink.table(response_body)
+local function file_upload(_, body, file)
+  body = body or {}
+
+  for k,v in pairs(body) do
+    body[k] = tostring(v)
+  end
+
+  if file and next(file) then
+    local file_type, file_table = next(file)
+    local file_name = file_table.path
+    local file_file = io.open(file_name, "r")
+    local file_data = {
+      filename = file_name,
+      data = file_file:read("*a")
     }
-    if body then
-      body = json.encode(body)
-      arguments.headers = {
-        ["Content-Type"] = "application/json",
-        ["Content-Length"] = body:len()
-      }
-      arguments.source = ltn12.source.string(body)
-    end
-    success, res = http.request(arguments)
-    if success then
-      local tab = json.decode(table.concat(response_body))
-      if res == 200 and tab.ok then
-        return tab.result
-      else
-        print("Failed: "..tab.description)
-        return false, tab
-      end
-    else
-      print("Connection error [" .. res .. "]")
-    end
+    file_file:close()
+    body[file_type] = file_data
   end
+  if next(body) == nil then
+    body = {""}
+  end
+
+  local request_body, boundary = mp.encode(body)
+
+  local arguments = {
+    method = "POST",
+    headers = {
+      ["Content-Type"] = "multipart/form-data; boundary=" .. boundary,
+      ["Content-Length"] = #request_body,
+    },
+  }
+  return arguments, request_body
+end
+
+local function json_request(_, body)
+  local arguments = {}
+  local request_body
+  if body then
+    request_body = json.encode(body)
+    arguments = {
+      method = "POST",
+      headers = {
+        ["Content-Type"] = "application/json",
+        ["Content-Length"] = #request_body,
+      },
+    }
+    -- ngx.log(ngx.DEBUG, "Outgoing request: ", request_body)
+  end
+  return arguments, request_body
+end
+
+local function ngx_request(self, method, body, file)
+  local arguments, request_body
+  if file then
+    arguments, request_body = file_upload(self, body, file)
+  else
+    arguments, request_body = json_request(self, body)
+  end
+  arguments.body = request_body
+  local httpc = resty_http.new()
+  local ok, err = httpc:request_uri((self._url..method), arguments)
+  if not ok then
+    local desc = "HTTP request failed: "..(err or "unknown")
+    ngx.log(ngx.ERR, desc)
+    return nil, {ok=false, error_code=0, description=desc}
+  end
+  return decode_reply(ok.body, ok.status, method)
+end
+
+local function lua_request(self, method, body, file)
+  local arguments, request_body
+  if file then
+    arguments, request_body = file_upload(self, body, file)
+  else
+    arguments, request_body = json_request(self, body)
+  end
+  arguments.source = ltn12.source.string(request_body)
+  arguments.url = self._url..method
+  local response = {}
+  arguments.sink = ltn12.sink.table(response)
+  local ok, res = ssl_https.request(arguments)
+  if not ok then
+    local desc = "HTTP request failed: "..(res or "unknown")
+    print("[ERROR]", desc)
+    return nil, {ok=false, error_code=0, description=desc}
+  end
+  return decode_reply(table.concat(response), res, method)
 end
 
 local function is_table(value)
-  if type(value) == "table" then
-    return value
-  else
+  if type(value) ~= "table" then
     return nil
   end
+  return value
 end
 
 local function assert_var(body, ...)
@@ -103,14 +123,45 @@ end
 
 local function check_id(body)
   if not body.inline_message_id then
-    assert(body.chat_id, "Missing required variable chat_id")
-    assert(body.message_id, "Missing required variable message_id")
+    assert_var(body, "chat_id", "message_id")
   end
+end
+
+local function read_config(self, config)
+  local server = "api.telegram.org"
+  local token = config
+  if is_table(config) then
+    token = config.token
+    server = config.server or server
+  end
+  assert(token, "Missing Bot API token")
+  self._url = "https://"..server.."/bot"..token.."/"
+end
+
+local function set_env(self)
+  if ngx then
+    local x = ngx.get_phase() -- Avoid using cosockets on unsupported contexts. See openresty/lua-nginx-module#1020
+    if x ~= "init" and x ~= "init_worker" and x ~= "set" and x ~= "log" and x ~= "header_filter" and x ~= "body_filter" then
+      resty_http = require "resty.http"
+      self._request = ngx_request
+    end
+    return
+  end
+  ssl_https = require "ssl.https"
+  self._request = lua_request
+end
+
+function _M:new(config)
+  local obj = {}
+  setmetatable(obj, {__index = self})
+  read_config(obj, config)
+  set_env(obj)
+  return obj
 end
 
 -- Getting updates
 
-function _M.getUpdates(...)
+function _M:getUpdates(...)
   local args = {...}
   local body = is_table(args[1]) or {
     offset = args[1],
@@ -118,10 +169,10 @@ function _M.getUpdates(...)
     timeout = args[3],
     allowed_updates = args[4]
   }
-  return request("getUpdates", body)
+  return self._request(self, "getUpdates", body)
 end
 
-function _M.setWebhook(...)
+function _M:setWebhook(...)
   local args = {...}
   local body = is_table(args[1]) or {
     url = args[1],
@@ -130,31 +181,24 @@ function _M.setWebhook(...)
     allowed_updates = args[4]
   }
   assert_var(body, "url")
-  request("setWebhook", body)
+  return self._request(self, "setWebhook", body)
 end
 
-function _M.deleteWebhook()
-  return request("deleteWebhook")
+function _M:deleteWebhook()
+  return self._request(self, "deleteWebhook")
 end
 
-function _M.getWebhookInfo()
-  return request("getWebhookInfo")
+function _M:getWebhookInfo()
+  return self._request(self, "getWebhookInfo")
 end
 
 -- Available methods
 
-function _M.getMe()
-  local getMe = c:get("getMe")
-  if getMe then
-    return getMe
-  else
-    getMe = request("getMe")
-    c:set("getMe", getMe)
-    return getMe
-  end
+function _M:getMe()
+  return self._request(self, "getMe")
 end
 
-function _M.sendMessage(...)
+function _M:sendMessage(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -166,10 +210,10 @@ function _M.sendMessage(...)
     reply_markup = args[7]
   }
   assert_var(body, "chat_id", "text")
-  return request("sendMessage", body)
+  return self._request(self, "sendMessage", body)
 end
 
-function _M.forwardMessage(...)
+function _M:forwardMessage(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -178,10 +222,10 @@ function _M.forwardMessage(...)
     disable_notification = args[4]
   }
   assert_var(body, "chat_id", "from_chat_id", "message_id")
-  return request("forwardMessage", body)
+  return self._request(self, "forwardMessage", body)
 end
 
-function _M.sendPhoto(...)
+function _M:sendPhoto(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -192,10 +236,13 @@ function _M.sendPhoto(...)
     reply_markup = args[6]
   }
   assert_var(body, "chat_id", "photo")
-  return request("sendPhoto", body)
+  if is_table(body.photo) then
+    return self._request(self, "sendPhoto", body, {photo = body.photo})
+  end
+  return self._request(self, "sendPhoto", body)
 end
 
-function _M.sendAudio(...)
+function _M:sendAudio(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -209,10 +256,13 @@ function _M.sendAudio(...)
     reply_markup = args[9]
   }
   assert_var(body, "chat_id", "audio")
-  return request("sendAudio", body)
+  if is_table(body.audio) then
+    return self._request(self, "sendAudio", body, {audio = body.audio})
+  end
+  return self._request(self, "sendAudio", body)
 end
 
-function _M.sendDocument(...)
+function _M:sendDocument(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -223,10 +273,13 @@ function _M.sendDocument(...)
     reply_markup = args[6]
   }
   assert_var(body, "chat_id", "document")
-  return request("sendDocument", body)
+  if is_table(body.document) then
+    return self._request(self, "sendDocument", body, {document = body.document})
+  end
+  return self._request(self, "sendDocument", body)
 end
 
-function _M.sendVideo(...)
+function _M:sendVideo(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -240,10 +293,13 @@ function _M.sendVideo(...)
     reply_markup = args[9]
   }
   assert_var(body, "chat_id", "video")
-  return request("sendVideo", body)
+  if is_table(body.video) then
+    return self._request(self, "sendVideo", body, {video = body.video})
+  end
+  return self._request(self, "sendVideo", body)
 end
 
-function _M.sendVoice(...)
+function _M:sendVoice(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -255,10 +311,13 @@ function _M.sendVoice(...)
     reply_markup = args[7]
   }
   assert_var(body, "chat_id", "voice")
-  return request("sendVoice", body)
+  if is_table(body.voice) then
+    return self._request(self, "sendVoice", body, {voice = body.voice})
+  end
+  return self._request(self, "sendVoice", body)
 end
 
-function _M.sendVideoNote(...)
+function _M:sendVideoNote(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -270,10 +329,13 @@ function _M.sendVideoNote(...)
     reply_markup = args[7]
   }
   assert_var(body, "chat_id", "video_note")
-  return request("sendVideoNote", body)
+  if is_table(body.video_note) then
+    return self._request(self, "sendVideoNote", body, {video_note = body.video_note})
+  end
+  return self._request(self, "sendVideoNote", body)
 end
 
-function _M.sendMediaGroup(...)
+function _M:sendMediaGroup(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -282,10 +344,10 @@ function _M.sendMediaGroup(...)
     reply_to_message_id = args[4]
   }
   assert_var(body, "chat_id", "media")
-  return request("sendMediaGroup", body)
+  return self._request(self, "sendMediaGroup", body)
 end
 
-function _M.sendLocation(...)
+function _M:sendLocation(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -297,10 +359,10 @@ function _M.sendLocation(...)
     reply_markup = args[7]
   }
   assert_var(body, "chat_id", "latitude", "longitude")
-  return request("sendLocation", body)
+  return self._request(self, "sendLocation", body)
 end
 
-function _M.editMessageLiveLocation(...)
+function _M:editMessageLiveLocation(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -312,10 +374,10 @@ function _M.editMessageLiveLocation(...)
   }
   check_id(body)
   assert_var(body, "latitude", "longitude")
-  return request("editMessageLiveLocation", body)
+  return self._request(self, "editMessageLiveLocation", body)
 end
 
-function _M.stopMessageLiveLocation(...)
+function _M:stopMessageLiveLocation(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -324,10 +386,10 @@ function _M.stopMessageLiveLocation(...)
     reply_markup = args[4]
   }
   check_id(body)
-  return request("editMessageLiveLocation", body)
+  return self._request(self, "editMessageLiveLocation", body)
 end
 
-function _M.sendVenue(...)
+function _M:sendVenue(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -341,10 +403,10 @@ function _M.sendVenue(...)
     reply_markup = args[9]
   }
   assert_var(body, "chat_id", "latitude", "longitude", "title", "address")
-  return request("sendVenue", body)
+  return self._request(self, "sendVenue", body)
 end
 
-function _M.sendContact(...)
+function _M:sendContact(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -356,20 +418,20 @@ function _M.sendContact(...)
     reply_markup = args[7]
   }
   assert_var(body, "chat_id", "phone_number", "first_name")
-  return request("sendContact", body)
+  return self._request(self, "sendContact", body)
 end
 
-function _M.sendChatAction(...)
+function _M:sendChatAction(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     action = args[2]
   }
   assert_var(body, "chat_id", "action")
-  return request("sendChatAction", body)
+  return self._request(self, "sendChatAction", body)
 end
 
-function _M.getUserProfilePhotos(...)
+function _M:getUserProfilePhotos(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
@@ -377,18 +439,18 @@ function _M.getUserProfilePhotos(...)
     limit = args[3]
   }
   assert_var(body, "user_id")
-  return request("getUserProfilePhotos", body)
+  return self._request(self, "getUserProfilePhotos", body)
 end
 
-function _M.getFile(file_id)
+function _M:getFile(file_id)
   local body = is_table(file_id) or {
     file_id = file_id
   }
   assert_var(body, "file_id")
-  return request("getFile", body)
+  return self._request(self, "getFile", body)
 end
 
-function _M.kickChatMember(...)
+function _M:kickChatMember(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -396,20 +458,20 @@ function _M.kickChatMember(...)
     until_date = args[3]
   }
   assert_var(body, "chat_id", "user_id")
-  return request("kickChatMember", body)
+  return self._request(self, "kickChatMember", body)
 end
 
-function _M.unbanChatMember(...)
+function _M:unbanChatMember(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     user_id = args[2]
   }
   assert_var(body, "chat_id", "user_id")
-  return request("unbanChatMember", body)
+  return self._request(self, "unbanChatMember", body)
 end
 
-function _M.restrictChatMember(...)
+function _M:restrictChatMember(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -421,10 +483,10 @@ function _M.restrictChatMember(...)
     can_add_web_page_previews = args[7]
   }
   assert_var(body, "chat_id", "user_id")
-  return request("restrictChatMember", body)
+  return self._request(self, "restrictChatMember", body)
 end
 
-function _M.promoteChatMember(...)
+function _M:promoteChatMember(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -439,56 +501,56 @@ function _M.promoteChatMember(...)
     can_promote_members = args[10]
   }
   assert_var(body, "chat_id", "user_id")
-  return request("promoteChatMember", body)
+  return self._request(self, "promoteChatMember", body)
 end
 
-function _M.exportChatInviteLink(chat_id)
+function _M:exportChatInviteLink(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("exportChatInviteLink", body)
+  return self._request(self, "exportChatInviteLink", body)
 end
 
-function _M.setChatPhoto(...)
+function _M:setChatPhoto(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     photo = args[2]
   }
   assert_var(body, "chat_id", "photo")
-  return request("setChatPhoto", body)
+  return self._request(self, "setChatPhoto", body)
 end
 
-function _M.deleteChatPhoto(chat_id)
+function _M:deleteChatPhoto(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("deleteChatPhoto", body)
+  return self._request(self, "deleteChatPhoto", body)
 end
 
-function _M.setChatTitle(...)
+function _M:setChatTitle(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     title = args[2]
   }
   assert_var(body, "chat_id", "title")
-  return request("setChatTitle", body)
+  return self._request(self, "setChatTitle", body)
 end
 
-function _M.setChatDescription(...)
+function _M:setChatDescription(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     description = args[2]
   }
   assert_var(body, "chat_id", "description")
-  return request("setChatDescription", body)
+  return self._request(self, "setChatDescription", body)
 end
 
-function _M.pinChatMessage(...)
+function _M:pinChatMessage(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -496,78 +558,78 @@ function _M.pinChatMessage(...)
     disable_notification = args[3]
   }
   assert_var(body, "chat_id", "message_id")
-  return request("pinChatMessage", body)
+  return self._request(self, "pinChatMessage", body)
 end
 
-function _M.unpinChatMessage(chat_id)
+function _M:unpinChatMessage(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("unpinChatMessage", body)
+  return self._request(self, "unpinChatMessage", body)
 end
 
-function _M.leaveChat(chat_id)
+function _M:leaveChat(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("leaveChat", body)
+  return self._request(self, "leaveChat", body)
 end
 
-function _M.getChat(chat_id)
+function _M:getChat(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("getChat", body)
+  return self._request(self, "getChat", body)
 end
 
-function _M.getChatAdministrators(chat_id)
+function _M:getChatAdministrators(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("getChatAdministrators", body)
+  return self._request(self, "getChatAdministrators", body)
 end
 
-function _M.getChatMembersCount(chat_id)
+function _M:getChatMembersCount(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id
   }
   assert_var(body, "chat_id")
-  return request("getChatMembersCount", body)
+  return self._request(self, "getChatMembersCount", body)
 end
 
-function _M.getChatMember(...)
+function _M:getChatMember(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     user_id = args[2]
   }
   assert_var(body, "chat_id", "user_id")
-  return request("getChatMember", body)
+  return self._request(self, "getChatMember", body)
 end
 
-function _M.setChatStickerSet(...)
+function _M:setChatStickerSet(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     sticker_set_name = args[2]
   }
   assert_var(body, "chat_id", "sticker_set_name")
-  return request("setChatStickerSet", body)
+  return self._request(self, "setChatStickerSet", body)
 end
 
-function _M.deleteChatStickerSet(chat_id)
+function _M:deleteChatStickerSet(chat_id)
   local body = is_table(chat_id) or {
     chat_id = chat_id,
   }
   assert_var(body, "chat_id")
-  return request("setChatStickerSet", body)
+  return self._request(self, "setChatStickerSet", body)
 end
 
-function _M.answerCallbackQuery(...)
+function _M:answerCallbackQuery(...)
   local args = {...}
   local body = is_table(args[1]) or {
     callback_query_id = args[1],
@@ -576,12 +638,12 @@ function _M.answerCallbackQuery(...)
     cache_time = args[4]
   }
   assert_var(body, "callback_query_id")
-  return request("answerCallbackQuery", body)
+  return self._request(self, "answerCallbackQuery", body)
 end
 
 -- Updating messages
 
-function _M.editMessageText(...)
+function _M:editMessageText(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -594,10 +656,10 @@ function _M.editMessageText(...)
   }
   check_id(body)
   assert_var(body, "text")
-  return request("editMessageText", body)
+  return self._request(self, "editMessageText", body)
 end
 
-function _M.editMessageCaption(...)
+function _M:editMessageCaption(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -607,10 +669,10 @@ function _M.editMessageCaption(...)
     reply_markup = args[5]
   }
   check_id(body)
-  return request("editMessageCaption", body)
+  return self._request(self, "editMessageCaption", body)
 end
 
-function _M.editMessageReplyMarkup(...)
+function _M:editMessageReplyMarkup(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -619,22 +681,22 @@ function _M.editMessageReplyMarkup(...)
     reply_markup = args[4]
   }
   check_id(body)
-  return request("editMessageReplyMarkup", body)
+  return self._request(self, "editMessageReplyMarkup", body)
 end
 
-function _M.deleteMessage(...)
+function _M:deleteMessage(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
     message_id = args[2]
   }
   assert_var(body, "chat_id", "message_id")
-  return request("deleteMessage", body)
+  return self._request(self, "deleteMessage", body)
 end
 
 -- Stickers
 
-function _M.sendSticker(...)
+function _M:sendSticker(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -645,28 +707,28 @@ function _M.sendSticker(...)
     reply_markup = args[6]
   }
   assert_var(body, "chat_id", "sticker")
-  return request("sendSticker", body)
+  return self._request(self, "sendSticker", body)
 end
 
-function _M.getStickerSet(name)
+function _M:getStickerSet(name)
   local body = is_table(name) or {
     name = name
   }
   assert_var(body, "name")
-  return request("getSticker", body)
+  return self._request(self, "getSticker", body)
 end
 
-function _M.uploadStickerFile(...)
+function _M:uploadStickerFile(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
     png_sticker = args[2]
   }
   assert_var(body, "user_id", "png_sticker")
-  return request("uploadStickerFile", body)
+  return self._request(self, "uploadStickerFile", body)
 end
 
-function _M.createNewStickerSet(...)
+function _M:createNewStickerSet(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
@@ -678,10 +740,10 @@ function _M.createNewStickerSet(...)
     mask_position = args[7]
   }
   assert_var(body, "user_id", "name", "title", "png_sticker", "emojis")
-  return request("createNewStickerSet", body)
+  return self._request(self, "createNewStickerSet", body)
 end
 
-function _M.addStickerToSet(...)
+function _M:addStickerToSet(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
@@ -691,30 +753,30 @@ function _M.addStickerToSet(...)
     mask_position = args[5]
   }
   assert_var(body, "user_id", "name", "png_sticker", "emojis")
-  return request("addStickerToSet", body)
+  return self._request(self, "addStickerToSet", body)
 end
 
-function _M.setStickerPositionInSet(...)
+function _M:setStickerPositionInSet(...)
   local args = {...}
   local body = is_table(args[1]) or {
     sticker = args[1],
     position = args[2]
   }
   assert_var(body, "sticker", "position")
-  return request("setStickerPositionInSet", body)
+  return self._request(self, "setStickerPositionInSet", body)
 end
 
-function _M.deleteStickerFromSet(sticker)
+function _M:deleteStickerFromSet(sticker)
   local body = is_table(sticker) or {
     sticker = sticker
   }
   assert_var(body, "sticker")
-  return request("deleteStickerFromSet", body)
+  return self._request(self, "deleteStickerFromSet", body)
 end
 
 -- Inline mode
 
-function _M.answerInlineQuery(...)
+function _M:answerInlineQuery(...)
   local args = {...}
   local body = is_table(args[1]) or {
     inline_query_id = args[1],
@@ -725,12 +787,12 @@ function _M.answerInlineQuery(...)
     switch_pm_parameter = args[6]
   }
   assert_var(body, "inline_query_id", "results")
-  return request("answerInlineQuery", body)
+  return self._request(self, "answerInlineQuery", body)
 end
 
 -- Payments
 
-function _M.sendInvoice(...)
+function _M:sendInvoice(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -756,10 +818,10 @@ function _M.sendInvoice(...)
     reply_markup = args[21]
   }
   assert_var(body, "chat_id", "title", "description", "payload", "provider_token", "start_parameter", "currency", "prices")
-  return request("sendInvoice", body)
+  return self._request(self, "sendInvoice", body)
 end
 
-function _M.answerShippingQuery(...)
+function _M:answerShippingQuery(...)
   local args = {...}
   local body = is_table(args[1]) or {
     shipping_query_id = args[1],
@@ -769,14 +831,14 @@ function _M.answerShippingQuery(...)
   }
   assert_var(body, "shipping_query_id")
   if body.ok then
-    assert(body.shipping_options, "Missing required variable shipping_options")
+    assert_var(body, "shipping_options")
   else
-    assert(body.error_message, "Missing required variable error_message")
+    assert_var(body, "error_message")
   end
-  return request("answerShippingQuery", body)
+  return self._request(self, "answerShippingQuery", body)
 end
 
-function _M.answerPreCheckoutQuery(...)
+function _M:answerPreCheckoutQuery(...)
   local args = {...}
   local body = is_table(args[1]) or {
     pre_checkout_query_id = args[1],
@@ -787,12 +849,12 @@ function _M.answerPreCheckoutQuery(...)
   if not body.ok then
     assert(body.error_message, "Missing required variable error_message")
   end
-  return request("answerPreCheckoutQuery", body)
+  return self._request(self, "answerPreCheckoutQuery", body)
 end
 
 -- Games
 
-function _M.sendGame(...)
+function _M:sendGame(...)
   local args = {...}
   local body = is_table(args[1]) or {
     chat_id = args[1],
@@ -802,10 +864,10 @@ function _M.sendGame(...)
     reply_markup = args[5]
   }
   assert_var(body, "chat_id", "game_short_name")
-  request("sendGame", body)
+  return self._request(self, "sendGame", body)
 end
 
-function _M.setGameScore(...)
+function _M:setGameScore(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
@@ -818,10 +880,10 @@ function _M.setGameScore(...)
   }
   check_id(body)
   assert_var(body, "user_id", "score")
-  return request("setGameScore", body)
+  return self._request(self, "setGameScore", body)
 end
 
-function _M.getGameHighScores(...)
+function _M:getGameHighScores(...)
   local args = {...}
   local body = is_table(args[1]) or {
     user_id = args[1],
@@ -831,19 +893,20 @@ function _M.getGameHighScores(...)
   }
   check_id(body)
   assert_var(body, "user_id")
-  return request("getGameHighScores", body)
+  return self._request(self, "getGameHighScores", body)
 end
 
 -- Passthrough unknown methods
 
-function _M.Custom(_, method)
-  print("Using custom method "..method)
-  return function(body)
-    return request(method, body)
+local function custom(_, method)
+  -- Remember custom methods
+  _M[method] = function(self, body, file)
+    return self._request(self, method, body, file)
   end
+  return _M[method]
 end
 
-setmetatable(_M, { __index = _M.Custom })
+setmetatable(_M, { __index = custom })
 
 -- Snake case shortcuts for known methods
 
@@ -890,7 +953,7 @@ _M.delete_chat_sticker_set = _M.deleteChatStickerSet
 _M.answer_callback_query = _M.answerCallbackQuery
 _M.edit_message_text = _M.editMessageText
 _M.edit_message_caption = _M.editMessageCaption
-_M.edit_message_replymarkup = _M.editMessageReplyMarkup
+_M.edit_message_reply_markup = _M.editMessageReplyMarkup
 _M.delete_message = _M.deleteMessage
 _M.send_sticker = _M.sendSticker
 _M.get_sticker_set = _M.getStickerSet
