@@ -231,9 +231,10 @@ function _M:sendPhoto(...)
     chat_id = args[1],
     photo = args[2],
     caption = args[3],
-    disable_notification = args[4],
-    reply_to_message_id = args[5],
-    reply_markup = args[6]
+    parse_mode = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "photo")
   if is_table(body.photo) then
@@ -248,12 +249,13 @@ function _M:sendAudio(...)
     chat_id = args[1],
     audio = args[2],
     caption = args[3],
-    duration = args[4],
-    performer = args[5],
-    title = args[6],
-    disable_notification = args[7],
-    reply_to_message_id = args[8],
-    reply_markup = args[9]
+    parse_mode = args[4],
+    duration = args[5],
+    performer = args[6],
+    title = args[7],
+    disable_notification = args[8],
+    reply_to_message_id = args[9],
+    reply_markup = args[10]
   }
   assert_var(body, "chat_id", "audio")
   if is_table(body.audio) then
@@ -268,9 +270,10 @@ function _M:sendDocument(...)
     chat_id = args[1],
     document = args[2],
     caption = args[3],
-    disable_notification = args[4],
-    reply_to_message_id = args[5],
-    reply_markup = args[6]
+    parse_mode = args[4],
+    disable_notification = args[5],
+    reply_to_message_id = args[6],
+    reply_markup = args[7]
   }
   assert_var(body, "chat_id", "document")
   if is_table(body.document) then
@@ -288,9 +291,10 @@ function _M:sendVideo(...)
     width = args[4],
     height = args[5],
     caption = args[6],
-    disable_notification = args[7],
-    reply_to_message_id = args[8],
-    reply_markup = args[9]
+    parse_mode = args[7],
+    disable_notification = args[8],
+    reply_to_message_id = args[9],
+    reply_markup = args[10]
   }
   assert_var(body, "chat_id", "video")
   if is_table(body.video) then
@@ -306,9 +310,10 @@ function _M:sendVoice(...)
     voice = args[2],
     duration = args[3],
     caption = args[4],
-    disable_notification = args[5],
-    reply_to_message_id = args[6],
-    reply_markup = args[7]
+    parse_mode = args[5],
+    disable_notification = args[6],
+    reply_to_message_id = args[7],
+    reply_markup = args[8]
   }
   assert_var(body, "chat_id", "voice")
   if is_table(body.voice) then
